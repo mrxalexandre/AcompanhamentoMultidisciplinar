@@ -18,11 +18,16 @@ export default function StudentDetail() {
     const [student, setStudent] = useState<Student | null>(null);
     const [profRecords, setProfRecords] = useState<ProfessorRecord[]>([]);
     const [professionalRecords, setProfessionalRecords] = useState<ProfessionalRecord[]>([]);
+    const [users, setUsers] = useState<Record<string, any>>({});
     const [tab, setTab] = useState<'records' | 'chat'>('records');
     
     // For Forms
     const [showProfForm, setShowProfForm] = useState(false);
     const [showProfessionalForm, setShowProfessionalForm] = useState(false);
+
+    // Filters
+    const [filterDate, setFilterDate] = useState('');
+    const [filterProfessionalId, setFilterProfessionalId] = useState('');
 
     useEffect(() => {
         if (!id) return;
@@ -31,6 +36,14 @@ export default function StudentDetail() {
             if (snap.exists()) setStudent({ id: snap.id, ...snap.data() } as Student);
         }
         fetchStudent();
+
+        const unsubUsers = onSnapshot(collection(db, 'users'), snap => {
+            const userMap: Record<string, any> = {};
+            snap.forEach(d => {
+                userMap[d.id] = { id: d.id, ...d.data() };
+            });
+            setUsers(userMap);
+        });
 
         const q1 = query(collection(db, 'professorRecords'), where('studentId', '==', id));
         const unsub1 = onSnapshot(q1, snap => {
@@ -46,7 +59,7 @@ export default function StudentDetail() {
             setProfessionalRecords(data.sort((a,b) => b.createdAt - a.createdAt));
         }, err => handleFirestoreError(err, OperationType.LIST, 'professionalRecords'));
 
-        return () => { unsub1(); unsub2(); };
+        return () => { unsub1(); unsub2(); unsubUsers(); };
     }, [id]);
 
     const exportPDF = () => {
@@ -99,6 +112,20 @@ export default function StudentDetail() {
     const isAdmin = profile?.role === 'admin';
     const isParent = profile?.role === 'parent';
 
+    const filteredProfRecords = profRecords.filter(r => {
+        if (filterDate && new Date(r.createdAt).toISOString().split('T')[0] !== filterDate) return false;
+        if (filterProfessionalId && r.professorId !== filterProfessionalId) return false;
+        return true;
+    });
+
+    const filteredProfessionalRecords = professionalRecords.filter(r => {
+        if (filterDate && new Date(r.createdAt).toISOString().split('T')[0] !== filterDate) return false;
+        if (filterProfessionalId && r.professionalId !== filterProfessionalId) return false;
+        return true;
+    });
+
+    const allProfessionals = Object.values(users).filter(u => u.role !== 'admin' && u.role !== 'parent');
+
     return (
         <div className="space-y-6 text-white">
             <header className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl flex flex-col items-start gap-4">
@@ -127,20 +154,43 @@ export default function StudentDetail() {
 
             {tab === 'records' && (
                 <div className="space-y-8">
-                     {/* Action Buttons */}
-                     <div className="flex gap-3">
-                        {isProfessor && (
-                            <button onClick={() => setShowProfForm(!showProfForm)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all">
-                                <PlusCircle size={18} />
-                                Lançar Registro Diário
-                            </button>
-                        )}
-                        {isSpecialist && (
-                            <button onClick={() => setShowProfessionalForm(!showProfessionalForm)} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:bg-indigo-700 transition-all">
-                                <PlusCircle size={18} />
-                                Lançar Diário de Visita
-                            </button>
-                        )}
+                     {/* Action Buttons and Filters */}
+                     <div className="flex flex-col md:flex-row justify-between gap-4 border-b border-white/10 pb-6">
+                         <div className="flex gap-3">
+                            {isProfessor && (
+                                <button onClick={() => setShowProfForm(!showProfForm)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all">
+                                    <PlusCircle size={18} />
+                                    Lançar Registro Diário
+                                </button>
+                            )}
+                            {isSpecialist && (
+                                <button onClick={() => setShowProfessionalForm(!showProfessionalForm)} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:bg-indigo-700 transition-all">
+                                    <PlusCircle size={18} />
+                                    Lançar Diário de Visita
+                                </button>
+                            )}
+                         </div>
+
+                         <div className="flex flex-col sm:flex-row gap-3">
+                            <input 
+                                type="date" 
+                                value={filterDate}
+                                onChange={e => setFilterDate(e.target.value)}
+                                className="px-4 py-2.5 bg-white/5 border border-white/20 rounded-xl text-white outline-none focus:ring-2 focus:ring-blue-500/50"
+                                title="Filtrar por Data"
+                            />
+                            <select 
+                                value={filterProfessionalId}
+                                onChange={e => setFilterProfessionalId(e.target.value)}
+                                className="px-4 py-2.5 bg-black/40 border border-white/20 rounded-xl text-white outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
+                                title="Filtrar por Profissional"
+                            >
+                                <option value="" className="bg-slate-900">Todos os Profissionais</option>
+                                {allProfessionals.map(p => (
+                                    <option key={p.id} value={p.id} className="bg-slate-900">{p.name} ({p.role})</option>
+                                ))}
+                            </select>
+                         </div>
                      </div>
 
                      {showProfForm && isProfessor && id && (
@@ -156,12 +206,15 @@ export default function StudentDetail() {
                          <div>
                              <h2 className="text-xl font-semibold mb-4 text-white">Registros Diários (Professores)</h2>
                              <div className="space-y-4">
-                                {profRecords.map(r => (
+                                {filteredProfRecords.map(r => (
                                     <div key={r.id} className="bg-white/10 backdrop-blur-md p-5 rounded-3xl border border-white/10 shadow-2xl">
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
                                                 <span className="font-semibold text-white">{r.discipline}</span>
                                                 <span className="text-xs text-slate-400 block mt-0.5">{new Date(r.createdAt).toLocaleString()}</span>
+                                                {users[r.professorId] && (
+                                                    <span className="text-xs text-blue-300 block mt-1">Por: {users[r.professorId].name}</span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-3 gap-2 mt-4">
@@ -179,7 +232,7 @@ export default function StudentDetail() {
                                         )}
                                     </div>
                                 ))}
-                                {profRecords.length === 0 && <p className="text-slate-400 text-sm">Nenhum registro encontrado.</p>}
+                                {filteredProfRecords.length === 0 && <p className="text-slate-400 text-sm">Nenhum registro encontrado.</p>}
                              </div>
                          </div>
 
@@ -187,18 +240,21 @@ export default function StudentDetail() {
                          <div>
                              <h2 className="text-xl font-semibold mb-4 text-white">Diário de Especialistas</h2>
                              <div className="space-y-4">
-                                {professionalRecords.map(r => (
+                                {filteredProfessionalRecords.map(r => (
                                     <div key={r.id} className="bg-indigo-900/40 backdrop-blur-md p-5 rounded-3xl border border-white/10 shadow-2xl">
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
                                                 <span className="font-semibold text-blue-300 bg-blue-500/20 border border-blue-500/30 px-3 py-1 rounded-full text-xs uppercase tracking-wide">{r.professionalRole}</span>
                                                 <span className="text-xs text-slate-400 block mt-2">{new Date(r.createdAt).toLocaleString()}</span>
+                                                {users[r.professionalId] && (
+                                                    <span className="text-xs text-blue-300 block mt-1">Por: {users[r.professionalId].name}</span>
+                                                )}
                                             </div>
                                         </div>
                                         <p className="mt-3 text-slate-200 leading-relaxed whitespace-pre-wrap">{r.text}</p>
                                     </div>
                                 ))}
-                                {professionalRecords.length === 0 && <p className="text-slate-400 text-sm">Nenhum registro encontrado.</p>}
+                                {filteredProfessionalRecords.length === 0 && <p className="text-slate-400 text-sm">Nenhum registro encontrado.</p>}
                              </div>
                          </div>
                      </div>

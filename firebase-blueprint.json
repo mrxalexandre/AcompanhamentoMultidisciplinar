@@ -1,0 +1,98 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "professor", "psychologist", "psychopedagogue", "speech_therapist", "parent"] },
+        "studentId": { "type": "string" },
+        "canExportCsv": { "type": "boolean" },
+        "canViewDashboard": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["email", "name", "role", "createdAt", "updatedAt"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student profile",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["name", "createdAt", "updatedAt"]
+    },
+    "ProfessorRecord": {
+      "title": "Professor Record",
+      "description": "Daily checklist from professor",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "professorId": { "type": "string" },
+        "discipline": { "type": "string" },
+        "concentration": { "type": "string" },
+        "focus": { "type": "string" },
+        "wait": { "type": "string" },
+        "organization": { "type": "string" },
+        "conclusion": { "type": "string" },
+        "mood": { "type": "string" },
+        "additionalObservations": { "type": "string" },
+        "createdAt": { "type": "number"}
+      },
+      "required": ["studentId", "professorId", "discipline", "concentration", "focus", "wait", "organization", "conclusion", "mood", "createdAt"]
+    },
+    "ProfessionalRecord": {
+      "title": "Professional Record",
+      "description": "Diary from other professionals",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "professionalId": { "type": "string" },
+        "professionalRole": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["studentId", "professionalId", "professionalRole", "text", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message between parent and professional",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["studentId", "senderId", "receiverId", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles and roles"
+    },
+    "students/{studentId}": {
+      "schema": { "$ref": "#/entities/Student" },
+      "description": "Student profiles"
+    },
+    "professorRecords/{recordId}": {
+      "schema": { "$ref": "#/entities/ProfessorRecord" },
+      "description": "Professor records"
+    },
+    "professionalRecords/{recordId}": {
+      "schema": { "$ref": "#/entities/ProfessionalRecord" },
+      "description": "Other professional records"
+    },
+    "messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Chat messages"
+    }
+  }
+}

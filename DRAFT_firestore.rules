@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isAdmin() {
+      // Bootstrapped admin using provided developer email, plus check the users collection
+      return isSignedIn() && (
+        request.auth.token.email == 'mrxalexandre@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function getUserRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'name', 'role', 'createdAt', 'updatedAt']) &&
+             data.email is string && data.email.size() <= 100 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.role in ['admin', 'professor', 'psychologist', 'psychopedagogue', 'speech_therapist', 'parent'] &&
+             data.createdAt is number && data.updatedAt is number;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isAdmin() && isValidUser(request.resource.data);
+      allow update: if isSignedIn() && (isAdmin() || request.auth.uid == userId) && isValidUser(request.resource.data);
+    }
+    
+    function isValidStudent(data) {
+      return data.keys().hasAll(['name', 'createdAt', 'updatedAt']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.createdAt is number && data.updatedAt is number;
+    }
+
+    match /students/{studentId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isAdmin() && isValidStudent(request.resource.data);
+      allow update: if isSignedIn() && isAdmin() && isValidStudent(request.resource.data);
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    function isValidProfessorRecord(data) {
+      return data.keys().hasAll(['studentId', 'professorId', 'discipline', 'concentration', 'focus', 'wait', 'organization', 'conclusion', 'mood', 'createdAt']) &&
+             data.studentId is string && data.studentId.size() <= 128 &&
+             data.professorId is string && data.professorId.size() <= 128 &&
+             data.discipline is string && data.discipline.size() <= 50 &&
+             data.concentration is string && data.concentration.size() <= 10 &&
+             data.focus is string && data.focus.size() <= 10 &&
+             data.wait is string && data.wait.size() <= 10 &&
+             data.organization is string && data.organization.size() <= 10 &&
+             data.conclusion is string && data.conclusion.size() <= 10 &&
+             data.mood is string && data.mood.size() <= 10 &&
+             data.createdAt is number;
+    }
+
+    match /professorRecords/{recordId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (isAdmin() || request.auth.uid == request.resource.data.professorId) && isValidProfessorRecord(request.resource.data);
+      allow update: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.professorId) && isValidProfessorRecord(request.resource.data);
+      allow delete: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.professorId);
+    }
+    
+    function isValidProfessionalRecord(data) {
+      return data.keys().hasAll(['studentId', 'professionalId', 'professionalRole', 'text', 'createdAt']) &&
+             data.studentId is string && data.studentId.size() <= 128 &&
+             data.professionalId is string && data.professionalId.size() <= 128 &&
+             data.professionalRole is string && data.professionalRole.size() <= 50 &&
+             data.text is string && data.text.size() <= 10000 &&
+             data.createdAt is number;
+    }
+
+    match /professionalRecords/{recordId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (isAdmin() || request.auth.uid == request.resource.data.professionalId) && isValidProfessionalRecord(request.resource.data);
+      allow update: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.professionalId) && isValidProfessionalRecord(request.resource.data);
+      allow delete: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.professionalId);
+    }
+    
+    function isValidMessage(data) {
+      return data.keys().hasAll(['studentId', 'senderId', 'receiverId', 'text', 'createdAt']) &&
+             data.studentId is string &&
+             data.senderId is string &&
+             data.receiverId is string &&
+             data.text is string && data.text.size() <= 5000 &&
+             data.createdAt is number;
+    }
+
+    match /messages/{messageId} {
+       allow get: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+       allow list: if isSignedIn() && (isAdmin() || resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+       allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && isValidMessage(request.resource.data);
+    }
+  }
+}

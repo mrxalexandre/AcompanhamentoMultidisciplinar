@@ -1,0 +1,6 @@
+{
+  "name": "Acompanhamento Multidisciplinar",
+  "description": "Sistema de acompanhamento multidisciplinar para alunos com acesso seguro para professores, pais e especialistas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

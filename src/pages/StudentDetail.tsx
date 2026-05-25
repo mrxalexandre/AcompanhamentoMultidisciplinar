@@ -225,6 +225,19 @@ export default function StudentDetail() {
                          {/* Diário de Professores */}
                          <div>
                              <h2 className="text-xl font-semibold mb-4 text-white">Registros Diários (Professores)</h2>
+                             
+                             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-4 text-xs text-slate-300">
+                                 <h3 className="font-bold text-white mb-2 uppercase tracking-wide text-[10px]">Legenda de Avaliação</h3>
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                                     <div><strong className="text-blue-300">Concentração:</strong> MC: Muito Conc. | MD: Médio | DR: Disp. Rápido | NC: Não Conc.</div>
+                                     <div><strong className="text-blue-300">Foco:</strong> R: Rápido | MT: Médio Tempo | AD: Adequado | TP: Tempo Prolong.</div>
+                                     <div><strong className="text-blue-300">Espera:</strong> AT: Atento | AL: Alheio | DI: Disperso</div>
+                                     <div><strong className="text-blue-300">Organização:</strong> M: Mantém | OL: Org. Leve | NF: Nec. Foco | AG: Agitado</div>
+                                     <div><strong className="text-blue-300">Conclusão:</strong> C: Conclui | CP: Parcial | NA: Não Atinge | NC: Não Conclui</div>
+                                     <div><strong className="text-blue-300">Humor:</strong> MH: Muito Humor | AO: Oscilante | DA: Desmotivado | AI: Alegre/Interat.</div>
+                                 </div>
+                             </div>
+
                              <div className="space-y-4">
                                 {filteredProfRecords.map(r => (
                                     <div key={r.id} className="bg-white/10 backdrop-blur-md p-5 rounded-3xl border border-white/10 shadow-2xl">

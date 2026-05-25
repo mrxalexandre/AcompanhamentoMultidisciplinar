@@ -77,9 +77,7 @@ export default function AdminStudents() {
                                             <tr key={s.id} className="hover:bg-white/5 transition-colors">
                                                 <td className="py-4 font-medium text-white">{s.name}</td>
                                                 <td className="py-4 text-right">
-                                                    <a href={`/student/${s.id}`} className="text-blue-300 font-bold hover:text-white px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                                                        Visualizar
-                                                    </a>
+                                                    {/* Botão removido a pedido */}
                                                 </td>
                                             </tr>
                                         ))}

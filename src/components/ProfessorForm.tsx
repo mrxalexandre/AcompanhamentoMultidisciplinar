@@ -1,35 +1,49 @@
 import React, { useState } from 'react';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, updateDoc, doc, collection } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from '../AuthContext';
+import { ProfessorRecord } from '../types';
 
-export default function ProfessorForm({ studentId, onSuccess }: { studentId: string, onSuccess: () => void }) {
+export default function ProfessorForm({ studentId, onSuccess, initialData }: { studentId: string, onSuccess: () => void, initialData?: ProfessorRecord }) {
     const { profile } = useAuth();
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState({
-        discipline: 'Portugues',
-        concentration: 'MC',
-        focus: 'R',
-        wait: 'AT',
-        organization: 'M',
-        conclusion: 'C',
-        mood: 'MH',
-        additionalObservations: ''
+        discipline: initialData?.discipline || 'Portugues',
+        concentration: initialData?.concentration || 'MC',
+        focus: initialData?.focus || 'R',
+        wait: initialData?.wait || 'AT',
+        organization: initialData?.organization || 'M',
+        conclusion: initialData?.conclusion || 'C',
+        mood: initialData?.mood || 'MH',
+        additionalObservations: initialData?.additionalObservations || ''
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
-            await addDoc(collection(db, 'professorRecords'), {
-                ...form,
-                studentId,
-                professorId: profile?.id,
-                createdAt: Date.now()
-            });
+            if (initialData?.id) {
+                await updateDoc(doc(db, 'professorRecords', initialData.id), form);
+                await addDoc(collection(db, 'logs'), {
+                    action: 'update',
+                    collection: 'professorRecords',
+                    recordId: initialData.id,
+                    studentId,
+                    userId: profile?.id,
+                    userName: profile?.name,
+                    createdAt: Date.now()
+                });
+            } else {
+                await addDoc(collection(db, 'professorRecords'), {
+                    ...form,
+                    studentId,
+                    professorId: profile?.id,
+                    createdAt: Date.now()
+                });
+            }
             onSuccess();
         } catch (error) {
-            handleFirestoreError(error, OperationType.CREATE, 'professorRecords');
+            handleFirestoreError(error, initialData?.id ? OperationType.UPDATE : OperationType.CREATE, 'professorRecords');
         } finally {
             setLoading(false);
         }
@@ -37,7 +51,7 @@ export default function ProfessorForm({ studentId, onSuccess }: { studentId: str
 
     return (
         <form onSubmit={handleSubmit} className="bg-white/5 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-2xl space-y-6">
-             <h3 className="text-xl font-bold text-white">Lançamento Diário</h3>
+             <h3 className="text-xl font-bold text-white">{initialData ? 'Editar Lançamento' : 'Lançamento Diário'}</h3>
              
              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                  <SelectField label="Disciplina" val={form.discipline} setVal={v => setForm({...form, discipline: v})} opts={["Portugues", "matematica", "historia", "ciencias", "ensaio", "educação fisica", "pratica textual", "lider em mim", "ingles"]} />

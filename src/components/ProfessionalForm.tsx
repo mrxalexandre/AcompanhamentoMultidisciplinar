@@ -1,28 +1,42 @@
 import React, { useState } from 'react';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, updateDoc, doc, collection } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from '../AuthContext';
+import { ProfessionalRecord } from '../types';
 
-export default function ProfessionalForm({ studentId, onSuccess }: { studentId: string, onSuccess: () => void }) {
+export default function ProfessionalForm({ studentId, onSuccess, initialData }: { studentId: string, onSuccess: () => void, initialData?: ProfessionalRecord }) {
     const { profile } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [text, setText] = useState('');
+    const [text, setText] = useState(initialData?.text || '');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if(!text.trim()) return;
         setLoading(true);
         try {
-            await addDoc(collection(db, 'professionalRecords'), {
-                studentId,
-                professionalId: profile?.id,
-                professionalRole: profile?.role,
-                text,
-                createdAt: Date.now()
-            });
+            if (initialData?.id) {
+                await updateDoc(doc(db, 'professionalRecords', initialData.id), { text });
+                await addDoc(collection(db, 'logs'), {
+                    action: 'update',
+                    collection: 'professionalRecords',
+                    recordId: initialData.id,
+                    studentId,
+                    userId: profile?.id,
+                    userName: profile?.name,
+                    createdAt: Date.now()
+                });
+            } else {
+                await addDoc(collection(db, 'professionalRecords'), {
+                    studentId,
+                    professionalId: profile?.id,
+                    professionalRole: profile?.role,
+                    text,
+                    createdAt: Date.now()
+                });
+            }
             onSuccess();
         } catch (error) {
-            handleFirestoreError(error, OperationType.CREATE, 'professionalRecords');
+            handleFirestoreError(error, initialData?.id ? OperationType.UPDATE : OperationType.CREATE, 'professionalRecords');
         } finally {
             setLoading(false);
         }
@@ -30,7 +44,7 @@ export default function ProfessionalForm({ studentId, onSuccess }: { studentId: 
 
     return (
         <form onSubmit={handleSubmit} className="bg-indigo-900/40 backdrop-blur-xl p-6 rounded-3xl border border-white/20 shadow-2xl space-y-6">
-             <h3 className="text-xl font-bold text-white">Diário de Visita - Especialista</h3>
+             <h3 className="text-xl font-bold text-white">{initialData ? 'Editar Diário de Visita' : 'Diário de Visita - Especialista'}</h3>
              
              <div>
                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 ml-1">Relatório da Sessão</label>

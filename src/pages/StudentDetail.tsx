@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { doc, getDoc, collection, onSnapshot, query, where, orderBy, addDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, collection, onSnapshot, query, where, orderBy, addDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from '../AuthContext';
 import { Student, ProfessorRecord, ProfessionalRecord, Message } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
-import { Download, FileText, FileSpreadsheet, PlusCircle } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, PlusCircle, Pen, Trash2 } from 'lucide-react';
 import ProfessorForm from '../components/ProfessorForm';
 import ProfessionalForm from '../components/ProfessionalForm';
 import ChatBox from '../components/ChatBox';
@@ -24,6 +24,8 @@ export default function StudentDetail() {
     // For Forms
     const [showProfForm, setShowProfForm] = useState(false);
     const [showProfessionalForm, setShowProfessionalForm] = useState(false);
+    const [editingProfRecord, setEditingProfRecord] = useState<ProfessorRecord | undefined>();
+    const [editingProfessionalRecord, setEditingProfessionalRecord] = useState<ProfessionalRecord | undefined>();
 
     // Filters
     const [filterDate, setFilterDate] = useState('');
@@ -126,6 +128,24 @@ export default function StudentDetail() {
 
     const allProfessionals = Object.values(users).filter(u => u.role !== 'admin' && u.role !== 'parent');
 
+    const handleDeleteRecord = async (collectionName: string, recordId: string) => {
+        if (!window.confirm('Tem certeza que deseja excluir este registro?')) return;
+        try {
+            await deleteDoc(doc(db, collectionName, recordId));
+            await addDoc(collection(db, 'logs'), {
+                action: 'delete',
+                collection: collectionName,
+                recordId,
+                studentId: id,
+                userId: profile?.id,
+                userName: profile?.name,
+                createdAt: Date.now()
+            });
+        } catch(e) {
+            handleFirestoreError(e, OperationType.DELETE, collectionName);
+        }
+    };
+
     return (
         <div className="space-y-6 text-white">
             <header className="bg-white/10 backdrop-blur-xl p-8 rounded-3xl border border-white/20 shadow-2xl flex flex-col items-start gap-4">
@@ -158,13 +178,13 @@ export default function StudentDetail() {
                      <div className="flex flex-col md:flex-row justify-between gap-4 border-b border-white/10 pb-6">
                          <div className="flex gap-3">
                             {isProfessor && (
-                                <button onClick={() => setShowProfForm(!showProfForm)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all">
+                                <button onClick={() => { setEditingProfRecord(undefined); setShowProfForm(!showProfForm); }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all">
                                     <PlusCircle size={18} />
                                     Lançar Registro Diário
                                 </button>
                             )}
                             {isSpecialist && (
-                                <button onClick={() => setShowProfessionalForm(!showProfessionalForm)} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:bg-indigo-700 transition-all">
+                                <button onClick={() => { setEditingProfessionalRecord(undefined); setShowProfessionalForm(!showProfessionalForm); }} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:bg-indigo-700 transition-all">
                                     <PlusCircle size={18} />
                                     Lançar Diário de Visita
                                 </button>
@@ -194,11 +214,11 @@ export default function StudentDetail() {
                      </div>
 
                      {showProfForm && isProfessor && id && (
-                         <ProfessorForm studentId={id} onSuccess={() => setShowProfForm(false)} />
+                         <ProfessorForm studentId={id} onSuccess={() => setShowProfForm(false)} initialData={editingProfRecord} />
                      )}
                      
                      {showProfessionalForm && isSpecialist && id && (
-                         <ProfessionalForm studentId={id} onSuccess={() => setShowProfessionalForm(false)} />
+                         <ProfessionalForm studentId={id} onSuccess={() => setShowProfessionalForm(false)} initialData={editingProfessionalRecord} />
                      )}
 
                      <div className="grid lg:grid-cols-2 gap-8">
@@ -216,6 +236,16 @@ export default function StudentDetail() {
                                                     <span className="text-xs text-blue-300 block mt-1">Por: {users[r.professorId].name}</span>
                                                 )}
                                             </div>
+                                            {(isAdmin || profile?.id === r.professorId) && (
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => { setEditingProfRecord(r); setShowProfForm(true); }} className="p-2 bg-white/5 border border-white/10 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-colors" title="Editar">
+                                                        <Pen size={14} />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteRecord('professorRecords', r.id)} className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors" title="Excluir">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="grid grid-cols-3 gap-2 mt-4">
                                             <Metric label="Conc." val={r.concentration} />
@@ -250,6 +280,16 @@ export default function StudentDetail() {
                                                     <span className="text-xs text-blue-300 block mt-1">Por: {users[r.professionalId].name}</span>
                                                 )}
                                             </div>
+                                            {(isAdmin || profile?.id === r.professionalId) && (
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => { setEditingProfessionalRecord(r); setShowProfessionalForm(true); }} className="p-2 bg-white/5 border border-white/10 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white transition-colors" title="Editar">
+                                                        <Pen size={14} />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteRecord('professionalRecords', r.id)} className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors" title="Excluir">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                         <p className="mt-3 text-slate-200 leading-relaxed whitespace-pre-wrap">{r.text}</p>
                                     </div>

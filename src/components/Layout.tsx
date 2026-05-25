@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { auth } from '../lib/firebase';
 import { signOut, updatePassword } from 'firebase/auth';
-import { LogOut, LayoutDashboard, Users, UserPlus, FileText, KeyRound, X } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, UserPlus, FileText, KeyRound, X, ClipboardList } from 'lucide-react';
 
 function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     const [password, setPassword] = useState('');
@@ -97,6 +97,10 @@ export default function Layout({ children }: { children: ReactNode }) {
                                  <NavLink to="/admin/students" className={({isActive}) => `flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-white/20 text-white shadow-sm border border-white/10' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>
                                     <UserPlus size={18} />
                                     <span>Alunos</span>
+                                 </NavLink>
+                                 <NavLink to="/admin/logs" className={({isActive}) => `flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-white/20 text-white shadow-sm border border-white/10' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>
+                                    <ClipboardList size={18} />
+                                    <span>Logs</span>
                                  </NavLink>
                                 </>
                              )}

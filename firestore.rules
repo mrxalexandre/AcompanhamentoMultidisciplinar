@@ -101,5 +101,10 @@ service cloud.firestore {
        allow read: if isSignedIn();
        allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && isValidMessage(request.resource.data);
     }
+
+    match /logs/{logId} {
+       allow read: if isSignedIn() && isAdmin();
+       allow create: if isSignedIn();
+    }
   }
 }

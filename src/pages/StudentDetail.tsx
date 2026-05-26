@@ -85,6 +85,28 @@ export default function StudentDetail() {
         doc.save(`${student?.name}_relatorio.pdf`);
     };
 
+    const exportMyPDF = () => {
+        const doc = new jsPDF();
+        const myRecords = profRecords.filter(r => r.professorId === profile?.id);
+        
+        doc.text(`Meu Relatório: ${student?.name}`, 14, 15);
+        autoTable(doc, {
+            startY: 25,
+            head: [['Data', 'Disciplina', 'Conc.', 'Foco', 'Esp.', 'Org.', 'Concl.', 'Humor']],
+            body: myRecords.map(r => [
+                new Date(r.createdAt).toLocaleDateString(),
+                r.discipline,
+                r.concentration,
+                r.focus,
+                r.wait,
+                r.organization,
+                r.conclusion,
+                r.mood,
+            ])
+        });
+        doc.save(`${student?.name}_meu_relatorio.pdf`);
+    };
+
     const exportCSV = () => {
          const csv = Papa.unparse(profRecords.map(r => ({
              Data: new Date(r.createdAt).toLocaleDateString(),
@@ -153,16 +175,26 @@ export default function StudentDetail() {
                     <h1 className="text-3xl font-bold tracking-tight text-white">{student.name}</h1>
                     <p className="text-slate-400 mt-1">Prontuário de Acompanhamento</p>
                 </div>
-                {isAdmin && (
+                {(isAdmin || isProfessor) && (
                     <div className="flex gap-3">
-                        <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 bg-blue-500/30 text-blue-200 rounded-xl font-bold hover:bg-blue-500/50 transition-colors border border-blue-500/30">
-                            <FileText size={18} />
-                            PDF
-                        </button>
-                        <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-purple-500/30 text-purple-200 rounded-xl font-bold hover:bg-purple-500/50 transition-colors border border-purple-500/30">
-                            <FileSpreadsheet size={18} />
-                            CSV
-                        </button>
+                        {isAdmin && (
+                            <>
+                                <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 bg-blue-500/30 text-blue-200 rounded-xl font-bold hover:bg-blue-500/50 transition-colors border border-blue-500/30">
+                                    <FileText size={18} />
+                                    PDF Geral
+                                </button>
+                                <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-purple-500/30 text-purple-200 rounded-xl font-bold hover:bg-purple-500/50 transition-colors border border-purple-500/30">
+                                    <FileSpreadsheet size={18} />
+                                    CSV
+                                </button>
+                            </>
+                        )}
+                        {isProfessor && (
+                            <button onClick={exportMyPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-500/30 text-indigo-200 rounded-xl font-bold hover:bg-indigo-500/50 transition-colors border border-indigo-500/30 text-sm">
+                                <FileText size={16} />
+                                Meu Relatório (PDF)
+                            </button>
+                        )}
                     </div>
                 )}
             </header>

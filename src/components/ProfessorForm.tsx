@@ -54,7 +54,7 @@ export default function ProfessorForm({ studentId, onSuccess, initialData }: { s
              <h3 className="text-xl font-bold text-white">{initialData ? 'Editar Lançamento' : 'Lançamento Diário'}</h3>
              
              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                 <SelectField label="Disciplina" val={form.discipline} setVal={v => setForm({...form, discipline: v})} opts={["Portugues", "matematica", "historia", "ciencias", "ensaio", "educação fisica", "pratica textual", "lider em mim", "ingles"]} />
+                 <SelectField label="Disciplina" val={form.discipline} setVal={v => setForm({...form, discipline: v})} opts={["Portugues", "matematica", "historia", "ciencias", "ensaio", "educação fisica", "pratica textual", "lider em mim", "ingles", "arte", "musica"]} />
                  <SelectField label="Concentração" val={form.concentration} setVal={v => setForm({...form, concentration: v})} opts={["MC", "MD", "DR", "NC"]} />
                  <SelectField label="Foco" val={form.focus} setVal={v => setForm({...form, focus: v})} opts={["R", "MT", "AD", "TP"]} />
                  <SelectField label="Espera" val={form.wait} setVal={v => setForm({...form, wait: v})} opts={["AT", "AL", "DI"]} />

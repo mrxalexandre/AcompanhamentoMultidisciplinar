@@ -8,6 +8,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminStudents from './pages/AdminStudents';
 import StudentDetail from './pages/StudentDetail';
 import AdminLogs from './pages/AdminLogs';
+import ConsolidatedReport from './pages/ConsolidatedReport';
 
 const ProtectedRoute = ({ children, roles }: { children: React.ReactNode, roles?: string[] }) => {
     const { user, profile, loading } = useAuth();
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/admin/users" element={<ProtectedRoute roles={['admin']}><Layout><AdminUsers/></Layout></ProtectedRoute>} />
           <Route path="/admin/students" element={<ProtectedRoute roles={['admin']}><Layout><AdminStudents/></Layout></ProtectedRoute>} />
           <Route path="/admin/logs" element={<ProtectedRoute roles={['admin']}><Layout><AdminLogs/></Layout></ProtectedRoute>} />
+          <Route path="/report" element={<ProtectedRoute><Layout><ConsolidatedReport/></Layout></ProtectedRoute>} />
           <Route path="/student/:id" element={<ProtectedRoute><Layout><StudentDetail/></Layout></ProtectedRoute>} />
         </Routes>
       </AuthProvider>

@@ -11,7 +11,7 @@ export default function AdminUsers() {
     const [error, setError] = useState('');
 
     const [editingUserId, setEditingUserId] = useState<string | null>(null);
-    const [form, setForm] = useState({ login: '', name: '', role: 'professor' as Role });
+    const [form, setForm] = useState({ login: '', name: '', role: 'professor' as Role, canViewDashboard: false });
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
@@ -28,14 +28,15 @@ export default function AdminUsers() {
         setForm({
             login: u.email.replace('@sistema.local', ''),
             name: u.name,
-            role: u.role
+            role: u.role,
+            canViewDashboard: !!u.canViewDashboard
         });
         setError('');
     };
 
     const handleCancelEdit = () => {
         setEditingUserId(null);
-        setForm({ login: '', name: '', role: 'professor' });
+        setForm({ login: '', name: '', role: 'professor', canViewDashboard: false });
         setError('');
     };
 
@@ -48,10 +49,11 @@ export default function AdminUsers() {
                 await updateDoc(doc(db, 'users', editingUserId), {
                     name: form.name,
                     role: form.role,
+                    canViewDashboard: form.canViewDashboard,
                     updatedAt: Date.now()
                 });
                 setEditingUserId(null);
-                setForm({ login: '', name: '', role: 'professor' });
+                setForm({ login: '', name: '', role: 'professor', canViewDashboard: false });
             } else {
                 const email = `${form.login}@sistema.local`;
                 
@@ -67,12 +69,13 @@ export default function AdminUsers() {
                     email,
                     name: form.name,
                     role: form.role,
+                    canViewDashboard: form.canViewDashboard,
                     createdAt: Date.now(),
                     updatedAt: Date.now()
                 };
 
                 await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
-                setForm({ login: '', name: '', role: 'professor' });
+                setForm({ login: '', name: '', role: 'professor', canViewDashboard: false });
             }
         } catch (err: any) {
             console.error(err);
@@ -126,6 +129,16 @@ export default function AdminUsers() {
                                     <option value="speech_therapist" className="bg-slate-900">Fonoaudiólogo</option>
                                     <option value="parent" className="bg-slate-900">Pais/Responsável</option>
                                 </select>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <input 
+                                    type="checkbox" 
+                                    id="canViewDashboard"
+                                    checked={form.canViewDashboard} 
+                                    onChange={e => setForm({...form, canViewDashboard: e.target.checked})} 
+                                    className="w-5 h-5 bg-white/5 border border-white/20 rounded focus:ring-blue-500/50 outline-none transition-all accent-blue-500" 
+                                />
+                                <label htmlFor="canViewDashboard" className="text-sm font-medium text-slate-300">Permissão para visualizar Relatório Consolidado (Geral)</label>
                             </div>
                             <button disabled={creating} type="submit" className="w-full py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-500 shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 mt-2">
                                 {creating ? (editingUserId ? 'Salvando...' : 'Cadastrando...') : (editingUserId ? 'Salvar Alterações' : 'Cadastrar Usuário')}

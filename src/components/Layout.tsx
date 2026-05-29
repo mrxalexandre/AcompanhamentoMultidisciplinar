@@ -4,7 +4,7 @@ import { useAuth } from '../AuthContext';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
 import { signOut, updatePassword } from 'firebase/auth';
-import { LogOut, LayoutDashboard, Users, UserPlus, FileText, KeyRound, X, ClipboardList, MessageCircleHeart } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, UserPlus, FileText, KeyRound, X, ClipboardList, MessageCircleHeart, BarChart3 } from 'lucide-react';
 import { Message, UserProfile, Student } from '../types';
 
 function UnreadMessagesModal() {
@@ -172,16 +172,16 @@ export default function Layout({ children }: { children: ReactNode }) {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#581c87] text-white font-sans selection:bg-purple-500/30">
+        <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#581c87] text-white font-sans selection:bg-purple-500/30 print:bg-none print:bg-white print:text-black">
             <UnreadMessagesModal />
             {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
             {/* Background elements */}
-            <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+            <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none print:hidden">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[100px] opacity-50"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-500/10 blur-[100px] opacity-50"></div>
             </div>
 
-            <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/10 backdrop-blur-xl border-b border-white/20 shadow-2xl">
+            <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/10 backdrop-blur-xl border-b border-white/20 shadow-2xl print:hidden">
                 <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
                     <div className="flex items-center space-x-8">
                         <div className="flex items-center gap-3">
@@ -194,6 +194,12 @@ export default function Layout({ children }: { children: ReactNode }) {
                                 <LayoutDashboard size={18} />
                                 <span>Painel</span>
                              </NavLink>
+                             {(profile?.role === 'admin' || profile?.canViewDashboard) && (
+                                 <NavLink to="/report" className={({isActive}) => `flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-white/20 text-white shadow-sm border border-white/10' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>
+                                    <BarChart3 size={18} />
+                                    <span>Relatórios</span>
+                                 </NavLink>
+                             )}
                              {profile?.role === 'admin' && (
                                 <>
                                  <NavLink to="/admin/users" className={({isActive}) => `flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-white/20 text-white shadow-sm border border-white/10' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}>

@@ -92,12 +92,18 @@ export default function ChatBox({ studentId }: { studentId: string }) {
                     <h3 className="font-semibold text-white">Contatos</h3>
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                    {contacts.map(c => (
-                        <button key={c.id} onClick={() => setReceiverId(c.id)} className={`w-full text-left px-5 py-4 flex flex-col border-b border-white/5 hover:bg-white/10 transition-colors ${receiverId === c.id ? 'bg-white/10 shadow-sm border-l-4 border-l-blue-400' : ''}`}>
-                             <span className="font-bold text-white">{c.name}</span>
-                             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mt-1">{c.role}</span>
-                        </button>
-                    ))}
+                    {contacts.map(c => {
+                        const unread = relevantMessages.some(m => m.receiverId === profile?.id && m.senderId === c.id && !m.isRead);
+                        return (
+                            <button key={c.id} onClick={() => setReceiverId(c.id)} className={`w-full text-left px-5 py-4 flex flex-col border-b border-white/5 hover:bg-white/10 transition-colors relative ${receiverId === c.id ? 'bg-white/10 shadow-sm border-l-4 border-l-blue-400' : ''}`}>
+                                <div className="flex justify-between items-center w-full">
+                                    <span className="font-bold text-white">{c.name}</span>
+                                    {unread && <span className="w-2.5 h-2.5 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.8)]"></span>}
+                                </div>
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mt-1">{c.role}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 

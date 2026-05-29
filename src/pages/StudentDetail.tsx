@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { doc, getDoc, deleteDoc, collection, onSnapshot, query, where, orderBy, addDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from '../AuthContext';
-import { Student, ProfessorRecord, ProfessionalRecord, Message } from '../types';
+import { Student, ProfessorRecord, ProfessionalRecord, Message, UserProfile } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -26,6 +26,7 @@ export default function StudentDetail() {
     const [showProfessionalForm, setShowProfessionalForm] = useState(false);
     const [editingProfRecord, setEditingProfRecord] = useState<ProfessorRecord | undefined>();
     const [editingProfessionalRecord, setEditingProfessionalRecord] = useState<ProfessionalRecord | undefined>();
+    const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
     // Filters
     const [filterDate, setFilterDate] = useState('');
@@ -61,8 +62,23 @@ export default function StudentDetail() {
             setProfessionalRecords(data.sort((a,b) => b.createdAt - a.createdAt));
         }, err => handleFirestoreError(err, OperationType.LIST, 'professionalRecords'));
 
-        return () => { unsub1(); unsub2(); unsubUsers(); };
-    }, [id]);
+        let unsubMessages = () => {};
+        if (profile?.id) {
+             const qM = query(collection(db, 'messages'), where('studentId', '==', id));
+             unsubMessages = onSnapshot(qM, snap => {
+                 let hasUnread = false;
+                 snap.forEach(d => {
+                     const msg = d.data() as Message;
+                     if (msg.receiverId === profile.id && !msg.isRead) {
+                         hasUnread = true;
+                     }
+                 });
+                 setHasUnreadMessages(hasUnread);
+             });
+        }
+
+        return () => { unsub1(); unsub2(); unsubUsers(); unsubMessages(); };
+    }, [id, profile?.id]);
 
     const exportPDF = () => {
         const doc = new jsPDF();
@@ -201,7 +217,12 @@ export default function StudentDetail() {
 
             <div className="flex gap-4 border-b border-white/20 pb-2">
                 <button onClick={() => setTab('records')} className={`px-4 py-2 font-bold transition-colors ${tab === 'records' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}>Registros</button>
-                <button onClick={() => setTab('chat')} className={`px-4 py-2 font-bold transition-colors ${tab === 'chat' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}>Comunicação (Chat)</button>
+                <button onClick={() => setTab('chat')} className={`px-4 py-2 font-bold transition-colors relative ${tab === 'chat' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400 hover:text-slate-200'}`}>
+                    Comunicação (Chat)
+                    {hasUnreadMessages && (
+                        <span className="absolute top-2 right-1.5 w-2 h-2 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.8)]"></span>
+                    )}
+                </button>
             </div>
 
             {tab === 'records' && (

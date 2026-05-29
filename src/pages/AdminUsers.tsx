@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db, adminAuth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { UserProfile, Role } from '../types';
@@ -10,6 +10,7 @@ export default function AdminUsers() {
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState('');
 
+    const [editingUserId, setEditingUserId] = useState<string | null>(null);
     const [form, setForm] = useState({ login: '', name: '', role: 'professor' as Role });
 
     useEffect(() => {
@@ -22,37 +23,63 @@ export default function AdminUsers() {
         return () => unsubscribe();
     }, []);
 
-    const handleCreateUser = async (e: React.FormEvent) => {
+    const handleEditClick = (u: UserProfile) => {
+        setEditingUserId(u.id);
+        setForm({
+            login: u.email.replace('@sistema.local', ''),
+            name: u.name,
+            role: u.role
+        });
+        setError('');
+    };
+
+    const handleCancelEdit = () => {
+        setEditingUserId(null);
+        setForm({ login: '', name: '', role: 'professor' });
+        setError('');
+    };
+
+    const handleSubmitUser = async (e: React.FormEvent) => {
         e.preventDefault();
         setCreating(true);
         setError('');
         try {
-            const email = `${form.login}@sistema.local`;
-            
-            let initialPassword = form.login;
-            if (initialPassword.length > 0 && initialPassword.length < 6) {
-                initialPassword = initialPassword.padEnd(6, form.login);
+            if (editingUserId) {
+                await updateDoc(doc(db, 'users', editingUserId), {
+                    name: form.name,
+                    role: form.role,
+                    updatedAt: Date.now()
+                });
+                setEditingUserId(null);
+                setForm({ login: '', name: '', role: 'professor' });
+            } else {
+                const email = `${form.login}@sistema.local`;
+                
+                let initialPassword = form.login;
+                if (initialPassword.length > 0 && initialPassword.length < 6) {
+                    initialPassword = initialPassword.padEnd(6, form.login);
+                }
+
+                // Crie no secondary app for admin preventing sign out
+                const userCredential = await createUserWithEmailAndPassword(adminAuth, email, initialPassword);
+                
+                const newUser: Omit<UserProfile, 'id'> = {
+                    email,
+                    name: form.name,
+                    role: form.role,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+
+                await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
+                setForm({ login: '', name: '', role: 'professor' });
             }
-
-            // Crie no secondary app for admin preventing sign out
-            const userCredential = await createUserWithEmailAndPassword(adminAuth, email, initialPassword);
-            
-            const newUser: Omit<UserProfile, 'id'> = {
-                email,
-                name: form.name,
-                role: form.role,
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            };
-
-            await setDoc(doc(db, 'users', userCredential.user.uid), newUser);
-            setForm({ login: '', name: '', role: 'professor' });
         } catch (err: any) {
             console.error(err);
             if (err.code === 'auth/operation-not-allowed') {
                 setError('Autenticação por Email/Senha desativada. Ative-a no Firebase Console.');
             } else {
-                setError('Erro ao criar usuário: ' + err.message);
+                setError((editingUserId ? 'Erro ao atualizar usuário: ' : 'Erro ao criar usuário: ') + err.message);
             }
         } finally {
             setCreating(false);
@@ -69,12 +96,21 @@ export default function AdminUsers() {
             <div className="grid md:grid-cols-3 gap-8">
                 <div className="md:col-span-1">
                     <div className="bg-white/10 backdrop-blur-xl p-6 rounded-3xl border border-white/20 shadow-2xl">
-                        <h2 className="text-lg font-semibold mb-6 text-white">Novo Usuário</h2>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-lg font-semibold text-white">
+                                {editingUserId ? 'Editar Usuário' : 'Novo Usuário'}
+                            </h2>
+                            {editingUserId && (
+                                <button type="button" onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-white transition-colors">
+                                    Cancelar Edição
+                                </button>
+                            )}
+                        </div>
                         {error && <div className="mb-4 text-sm text-red-100 bg-red-500/20 border border-red-500/30 p-3 rounded-xl">{error}</div>}
-                        <form onSubmit={handleCreateUser} className="space-y-4">
+                        <form onSubmit={handleSubmitUser} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Login (Senha será igual)</label>
-                                <input required value={form.login} onChange={e => setForm({...form, login: e.target.value.toLowerCase()})} className="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
+                                <input required disabled={!!editingUserId} value={form.login} onChange={e => setForm({...form, login: e.target.value.toLowerCase()})} className="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all disabled:opacity-50" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Nome Completo</label>
@@ -92,7 +128,7 @@ export default function AdminUsers() {
                                 </select>
                             </div>
                             <button disabled={creating} type="submit" className="w-full py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-500 shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 mt-2">
-                                {creating ? 'Cadastrando...' : 'Cadastrar Usuário'}
+                                {creating ? (editingUserId ? 'Salvando...' : 'Cadastrando...') : (editingUserId ? 'Salvar Alterações' : 'Cadastrar Usuário')}
                             </button>
                         </form>
                     </div>
@@ -121,12 +157,20 @@ export default function AdminUsers() {
                                                     <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 border border-blue-500/30 text-blue-300 uppercase tracking-widest">{u.role}</span>
                                                 </td>
                                                 <td className="py-4 text-right">
-                                                    <button 
-                                                        onClick={() => alert(`Ação não suportada puramente via cliente. Para resetar a senha do usuário ${u.name}, por favor acesse o Firebase Console ou requisite integração de backend com Admin SDK.`)}
-                                                        className="text-xs font-bold text-slate-400 hover:text-white transition-colors"
-                                                    >
-                                                        Resetar Senha
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-3">
+                                                        <button 
+                                                            onClick={() => handleEditClick(u)}
+                                                            className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                                                        >
+                                                            Editar
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => alert(`Ação não suportada puramente via cliente. Para resetar a senha do usuário ${u.name}, por favor acesse o Firebase Console ou requisite integração de backend com Admin SDK.`)}
+                                                            className="text-xs font-bold text-slate-400 hover:text-white transition-colors"
+                                                        >
+                                                            Resetar Senha
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -140,3 +184,4 @@ export default function AdminUsers() {
         </div>
     )
 }
+

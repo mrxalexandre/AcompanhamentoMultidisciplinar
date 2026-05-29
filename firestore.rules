@@ -100,6 +100,8 @@ service cloud.firestore {
     match /messages/{messageId} {
        allow read: if isSignedIn();
        allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId && isValidMessage(request.resource.data);
+       allow update: if isSignedIn() && (request.auth.uid == resource.data.receiverId || isAdmin());
+       allow delete: if isSignedIn() && isAdmin();
     }
 
     match /logs/{logId} {

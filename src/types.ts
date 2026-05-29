@@ -50,4 +50,5 @@ export interface Message {
     receiverId: string;
     text: string;
     createdAt: number;
+    isRead?: boolean;
 }

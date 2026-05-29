@@ -148,7 +148,7 @@ export default function StudentDetail() {
         return true;
     });
 
-    const allProfessionals = Object.values(users).filter(u => u.role !== 'admin' && u.role !== 'parent');
+    const allProfessionals = (Object.values(users) as UserProfile[]).filter(u => u.role !== 'admin' && u.role !== 'parent');
 
     const handleDeleteRecord = async (collectionName: string, recordId: string) => {
         if (!window.confirm('Tem certeza que deseja excluir este registro?')) return;
@@ -355,11 +355,60 @@ export default function StudentDetail() {
     );
 }
 
+const legends: Record<string, Record<string, string>> = {
+    'Conc.': {
+        'MC': 'Muito Concentrado',
+        'MD': 'Médio',
+        'DR': 'Disperso Rápido',
+        'NC': 'Não Concentrado'
+    },
+    'Foco': {
+        'R': 'Rápido',
+        'MT': 'Médio Tempo',
+        'AD': 'Adequado',
+        'TP': 'Tempo Prolongado'
+    },
+    'Espera': {
+        'AT': 'Atento',
+        'AL': 'Alheio',
+        'DI': 'Disperso'
+    },
+    'Org.': {
+        'M': 'Mantém',
+        'OL': 'Organização Leve',
+        'NF': 'Necessita Foco',
+        'AG': 'Agitado'
+    },
+    'Concl.': {
+        'C': 'Conclui',
+        'CP': 'Conclui Parcialmente',
+        'NA': 'Não Atinge',
+        'NC': 'Não Conclui'
+    },
+    'Humor': {
+        'MH': 'Muito Humor',
+        'AO': 'Oscilante',
+        'DA': 'Desmotivado',
+        'AI': 'Alegre/Interativo'
+    }
+};
+
 function Metric({ label, val }: { label: string, val: string }) {
+    const hint = legends[label]?.[val];
+
     return (
-        <div className="bg-white/5 rounded-xl p-2 text-center border border-white/10">
+        <div 
+            className="group relative bg-white/5 rounded-xl p-2 text-center border border-white/10 cursor-help outline-none"
+            tabIndex={0}
+        >
             <div className="text-[10px] uppercase font-bold text-slate-400 leading-tight">{label}</div>
             <div className="font-semibold tracking-tight text-white">{val}</div>
+            {hint && (
+                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity bg-slate-800 text-white text-[11px] font-medium py-1.5 px-3 rounded-lg shadow-xl z-20 border border-white/20">
+                    {hint}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                </div>
+            )}
         </div>
     )
 }

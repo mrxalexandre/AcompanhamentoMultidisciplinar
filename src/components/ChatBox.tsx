@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, query, where, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Message, UserProfile } from '../types';
 import { useAuth } from '../AuthContext';
-import { Send } from 'lucide-react';
+import { Send, Check, CheckCheck } from 'lucide-react';
 
 export default function ChatBox({ studentId }: { studentId: string }) {
     const { profile } = useAuth();
@@ -13,6 +13,29 @@ export default function ChatBox({ studentId }: { studentId: string }) {
     const [receiverId, setReceiverId] = useState('');
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Filter messages relevant to the current user
+    const relevantMessages = profile?.role === 'admin' 
+        ? messages 
+        : messages.filter(m => m.senderId === profile?.id || m.receiverId === profile?.id);
+
+    // Handle marking as read
+    useEffect(() => {
+        if (!receiverId || !profile?.id) return;
+        const unreadMsgs = relevantMessages.filter(m => 
+            m.receiverId === profile.id && 
+            m.senderId === receiverId && 
+            !m.isRead
+        );
+        
+        unreadMsgs.forEach(async (msg) => {
+            try {
+                await updateDoc(doc(db, 'messages', msg.id), { isRead: true });
+            } catch (e) {
+                console.error("Failed to mark as read", e);
+            }
+        });
+    }, [receiverId, relevantMessages, profile?.id]);
 
     useEffect(() => {
         // Fetch all users to map sender names and populate contacts (since it's a small internal app)
@@ -48,7 +71,8 @@ export default function ChatBox({ studentId }: { studentId: string }) {
                 senderId: profile?.id,
                 receiverId,
                 text,
-                createdAt: Date.now()
+                createdAt: Date.now(),
+                isRead: false
             });
             setText('');
         } catch (error) {
@@ -56,15 +80,9 @@ export default function ChatBox({ studentId }: { studentId: string }) {
         }
     };
 
-    // Filter messages relevant to the current user (sent by them or received by them)
-    // Actually, admins might see all? No, the rule restricts to sender/receiver or admin.
-    const relevantMessages = profile?.role === 'admin' 
-        ? messages 
-        : messages.filter(m => m.senderId === profile?.id || m.receiverId === profile?.id);
-
     // If I'm a parent, I can select any professional to talk to.
     // If I'm a professional, I can talk to the parent.
-    const contacts = Object.values(users).filter(u => u.id !== profile?.id && u.role !== 'admin');
+    const contacts = (Object.values(users) as UserProfile[]).filter(u => u.id !== profile?.id && u.role !== 'admin');
 
     return (
         <div className="flex bg-white/5 backdrop-blur-3xl h-[600px] w-full border border-white/10 rounded-3xl overflow-hidden shadow-2xl text-white">
@@ -101,9 +119,12 @@ export default function ChatBox({ studentId }: { studentId: string }) {
                                     <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                         <div className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${isMe ? 'bg-blue-600 text-white rounded-br-sm shadow-xl' : 'bg-white/10 border border-white/20 text-slate-200 rounded-bl-sm shadow-xl'}`}>
                                             <p className="text-sm">{m.text}</p>
-                                            <span className={`text-[10px] block mt-1 ${isMe ? 'text-blue-200' : 'text-slate-400'}`}>
+                                            <div className={`flex items-center mt-1 gap-1 text-[10px] ${isMe ? 'text-blue-200 justify-end' : 'text-slate-400 justify-start'}`}>
                                                 {new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                            </span>
+                                                {isMe && (
+                                                    m.isRead ? <CheckCheck size={14} className="text-blue-300" /> : <Check size={14} className="text-blue-200/70" />
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )
